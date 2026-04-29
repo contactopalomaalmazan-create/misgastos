@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MisGastos">
+<meta name="theme-color" content="#fafaf8">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>💸 MisGastos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#fafaf8; --card:#ffffff; --accent:#ff5c5c; --text:#111111;
+  --muted:#aaaaaa; --border:#f0f0f0; --green:#4caf7d;
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; max-width:430px; margin:0 auto; padding-bottom:90px; }
+
+.header { background:var(--card); padding:56px 24px 20px; position:sticky; top:0; z-index:10; }
+.header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.app-title { font-size:15px; font-weight:600; color:var(--muted); }
+.big-amount { font-size:48px; font-weight:800; letter-spacing:-2px; line-height:1; margin-bottom:4px; }
+.big-amount sup { font-size:20px; font-weight:500; color:var(--muted); vertical-align:super; letter-spacing:0; }
+.period-row { display:flex; align-items:center; gap:6px; margin-top:8px; }
+.period-pill { background:var(--bg); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; color:var(--text); }
+
+.chart-section { padding:20px 24px 0; background:var(--card); }
+.chart-wrap { display:flex; gap:10px; align-items:flex-end; height:180px; padding-bottom:8px; overflow-x:auto; scrollbar-width:none; }
+.chart-wrap::-webkit-scrollbar { display:none; }
+.bar-col { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; }
+.bar-outer { width:52px; background:var(--bg); border-radius:16px; position:relative; display:flex; align-items:flex-end; overflow:hidden; }
+.bar-inner { width:100%; border-radius:14px; transition:height 0.6s cubic-bezier(.34,1.56,.64,1); position:relative; min-height:36px; }
+.bar-inner::after { content:attr(data-emoji); position:absolute; bottom:8px; left:50%; transform:translateX(-50%); font-size:18px; }
+.bar-amount { font-size:11px; font-weight:700; color:var(--text); }
+.bar-pct { font-size:10px; color:var(--muted); font-weight:500; }
+.bar-label { font-size:10px; color:var(--muted); max-width:60px; text-align:center; font-weight:600; }
+
+.type-toggle { display:flex; gap:8px; padding:12px 16px; background:var(--card); border-top:1px solid var(--border); }
+.type-btn { flex:1; padding:7px; border:1.5px solid var(--border); border-radius:12px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s; }
+.type-btn.active.gasto { border-color:var(--accent); color:var(--accent); background:#fff5f5; }
+.type-btn.active.ingreso { border-color:var(--green); color:var(--green); background:#f5fff8; }
+
+.input-row { display:flex; gap:8px; padding:0 16px 12px; background:var(--card); align-items:center; }
+.input-emoji-btn { font-size:20px; background:var(--bg); border:none; border-radius:12px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+.input-field { flex:1; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; background:transparent; color:var(--text); }
+.input-field::placeholder { color:var(--muted); }
+.amount-input { width:80px; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700; text-align:right; background:transparent; color:var(--text); }
+.add-btn { background:var(--accent); color:white; border:none; border-radius:12px; width:36px; height:36px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform 0.15s; }
+.add-btn:active { transform:scale(0.9); }
+
+.tx-section { padding:0 16px; }
+.day-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; padding:16px 4px 8px; }
+.tx-card { background:var(--card); border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px; margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,0.04); animation:slideIn 0.3s ease; position:relative; overflow:hidden; }
+@keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.tx-emoji { font-size:24px; width:42px; height:42px; background:var(--bg); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.tx-info { flex:1; min-width:0; }
+.tx-desc { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tx-cat { font-size:11px; color:var(--muted); font-weight:500; margin-top:2px; }
+.tx-amount { font-size:16px; font-weight:700; flex-shrink:0; }
+.tx-amount.gasto { color:var(--text); }
+.tx-amount.ingreso { color:var(--green); }
+.tx-delete { position:absolute; right:-50px; top:0; bottom:0; width:50px; background:#ff4757; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; transition:right 0.25s; border-radius:0 16px 16px 0; }
+.tx-card.swiped .tx-delete { right:0; }
+.tx-card.swiped { border-radius:16px 0 0 16px; }
+
+.empty-state { text-align:center; padding:36px 20px; color:var(--muted); }
+.empty-state .emoji { font-size:40px; margin-bottom:10px; }
+.empty-state p { font-size:14px; font-weight:500; }
+
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:var(--card); border-top:1px solid var(--border); padding:10px 0 24px; display:flex; justify-content:space-around; z-index:20; }
+.nav-btn { display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; cursor:pointer; padding:6px 24px; border-radius:12px; }
+.nav-icon { font-size:20px; }
+.nav-label { font-size:10px; font-weight:600; color:var(--muted); font-family:'DM Sans',sans-serif; }
+.nav-btn.active .nav-label { color:var(--accent); }
+
+.emoji-picker { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:white; border-radius:20px; padding:16px; box-shadow:0 8px 40px rgba(0,0,0,0.12); display:none; z-index:30; width:calc(100% - 32px); max-width:398px; }
+.emoji-picker.show { display:block; animation:popUp 0.2s ease; }
+@keyframes popUp { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+.emoji-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.emoji-opt { font-size:24px; text-align:center; padding:8px 4px; border-radius:10px; cursor:pointer; }
+.emoji-opt:active { background:var(--bg); }
+.overlay { position:fixed; inset:0; z-index:25; display:none; }
+.overlay.show { display:block; }
+
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px); background:var(--text); color:white; padding:10px 20px; border-radius:20px; font-size:13px; font-weight:600; z-index:100; transition:transform 0.3s ease; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+.stats-view { display:none; padding:16px; }
+.stats-view.active { display:block; }
+.main-view.hidden { display:none; }
+.stats-title { font-size:18px; font-weight:800; margin-bottom:16px; padding-top:8px; }
+.cat-stat-item { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+.cat-stat-emoji { font-size:22px; width:40px; height:40px; background:var(--bg); border-radius:10px; display:flex; align-items:center; justify-content:center; }
+.cat-stat-info { flex:1; }
+.cat-stat-name { font-size:13px; font-weight:600; }
+.cat-bar-wrap { height:5px; background:var(--border); border-radius:10px; margin-top:6px; overflow:hidden; }
+.cat-bar { height:100%; border-radius:10px; transition:width 0.5s ease; }
+.cat-stat-amount { font-size:14px; font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="app-title">Este mes 🌙 en Personal</div>
+  </div>
+  <div class="big-amount" id="bigAmount">0<sup>$</sup></div>
+  <div class="period-row">
+    <div class="period-pill" id="monthPill">📅 Abril 2026</div>
+  </div>
+</div>
+
+<div class="main-view" id="mainView">
+  <div class="chart-section">
+    <div class="chart-wrap" id="chartWrap">
+      <div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--muted);font-size:13px;font-weight:500;padding:40px 0;">Agrega gastos para ver el gráfico 📊</div>
+    </div>
+  </div>
+
+  <div class="type-toggle">
+    <button class="type-btn active gasto" id="btnGasto" onclick="setType('gasto')">📤 Gasto</button>
+    <button class="type-btn ingreso" id="btnIngreso" onclick="setType('ingreso')">📥 Ingreso</button>
+  </div>
+
+  <div class="input-row">
+    <button class="input-emoji-btn" id="emojiBtn" onclick="toggleEmojiPicker()">🛒</button>
+    <input class="input-field" id="descInput" placeholder="¿En qué gastaste?" maxlength="40">
+    <input class="amount-input" id="amountInput" type="number" placeholder="$0" min="0">
+    <button class="add-btn" onclick="addTransaction()">＋</button>
+  </div>
+
+  <div class="tx-section" id="txList"></div>
+</div>
+
+<div class="stats-view" id="statsView">
+  <div class="stats-title">📊 Por categoría</div>
+  <div id="catStats"></div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navHome" onclick="switchView('home')">
+    <span class="nav-icon">🏠</span><span class="nav-label">Inicio</span>
+  </button>
+  <button class="nav-btn" id="navStats" onclick="switchView('stats')">
+    <span class="nav-icon">📊</span><span class="nav-label">Categorías</span>
+  </button>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeEmojiPicker()"></div>
+<div class="emoji-picker" id="emojiPicker"><div class="emoji-grid" id="emojiGrid"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CATEGORIES = [
+  {id:'comida',label:'Comida',emoji:'🍔',color:'#f5d5a8'},
+  {id:'super',label:'Super',emoji:'🛒',color:'#b8d4f0'},
+  {id:'transporte',label:'Transporte',emoji:'🚗',color:'#f5b8c8'},
+  {id:'salud',label:'Salud',emoji:'💊',color:'#c8e0d4'},
+  {id:'entretención',label:'Entretención',emoji:'🎬',color:'#e8f0a8'},
+  {id:'ropa',label:'Ropa',emoji:'👕',color:'#e0c8f0'},
+  {id:'cafe',label:'Café',emoji:'☕',color:'#f5d5a8'},
+  {id:'gym',label:'Gym',emoji:'🏋️',color:'#b8d4f0'},
+  {id:'casa',label:'Casa',emoji:'🏠',color:'#f5b8c8'},
+  {id:'mascota',label:'Mascota',emoji:'🐾',color:'#c8e0d4'},
+  {id:'otro',label:'Otro',emoji:'📦',color:'#e8e8e8'},
+];
+const EMOJIS = ['🛒','🍔','🚗','💊','🎬','👕','🏠','☕','🏋️','🐾','💼','📦','🎮','✈️','🍕','🎵','📚','🐶','🐱','🌮','🍣','🥗','🍷','🎁','💡','📱','💻','🎓','🏖️','⚽','🎨','🧴','🪴','🧹','🩺','🦷','🧃','🎂','🍦','🎪'];
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+let transactions = JSON.parse(localStorage.getItem('mgv3')||'[]');
+let selectedEmoji='🛒', currentType='gasto', touchStartX=0;
+
+function init() {
+  const now=new Date();
+  document.getElementById('monthPill').textContent='📅 '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+  document.getElementById('emojiGrid').innerHTML=EMOJIS.map(e=>`<div class="emoji-opt" onclick="selectEmoji('${e}')">${e}</div>`).join('');
+  renderAll();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+}
+
+function getCatByEmoji(emoji){ return CATEGORIES.find(c=>c.emoji===emoji)||{label:'Otro',emoji,color:'#e8e8e8',id:'otro'}; }
+function getMonthTxs(){ const n=new Date(); return transactions.filter(t=>{ const d=new Date(t.date); return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }); }
+function renderAll(){ renderHeader(); renderChart(); renderTxList(); }
+
+function renderHeader(){
+  const m=getMonthTxs();
+  const exp=m.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+  const inc=m.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+  const bal=inc-exp;
+  document.getElementById('bigAmount').innerHTML=(bal<0?'-':'')+Math.abs(bal).toLocaleString('es-CL',{maximumFractionDigits:0})+'<sup>$</sup>';
+}
+
+function renderChart(){
+  const m=getMonthTxs().filter(t=>t.type==='gasto');
+  const wrap=document.getElementById('chartWrap');
+  if(!m.length){ wrap.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;width:100%;color:var(--muted);font-size:13px;font-weight:500;padding:40px 0;">Agrega gastos para ver el gráfico 📊</div>`; return; }
+  const groups={};
+  m.forEach(t=>{ const c=getCatByEmoji(t.emoji); if(!groups[c.id]) groups[c.id]={...c,total:0}; groups[c.id].total+=t.amount; });
+  const entries=Object.values(groups).sort((a,b)=>b.total-a.total).slice(0,6);
+  const maxVal=entries[0].total, totalAll=entries.reduce((s,e)=>s+e.total,0), maxH=140;
+  wrap.innerHTML=entries.map((e,i)=>{
+    const h=Math.max(36,Math.round((e.total/maxVal)*maxH));
+    const pct=Math.round(e.total/totalAll*100);
+    const amt=e.total>=1000?Math.round(e.total/1000)+'k':e.total.toLocaleString('es-CL',{maximumFractionDigits:0});
+    return `<div class="bar-col" style="animation:slideIn 0.4s ease ${i*0.08}s both">
+      <div class="bar-amount">${amt}</div>
+      <div class="bar-pct">${pct}%</div>
+      <div class="bar-outer" style="height:${maxH}px">
+        <div class="bar-inner" data-emoji="${e.emoji}" style="height:${h}px;background:${e.color}"></div>
+      </div>
+      <div class="bar-label">${e.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTxList(){
+  const list=document.getElementById('txList');
+  if(!transactions.length){ list.innerHTML=`<div class="empty-state"><div class="emoji">🌱</div><p>Sin movimientos aún</p></div>`; return; }
+  const groups={};
+  transactions.forEach(t=>{ if(!groups[t.dateKey]) groups[t.dateKey]=[]; groups[t.dateKey].push(t); });
+  list.innerHTML=Object.entries(groups).map(([date,txs])=>`
+    <div class="day-label">${fmtDate(date)}</div>
+    ${txs.map(t=>`<div class="tx-card" id="tx-${t.id}" ontouchstart="ts(event)" ontouchend="te(event,${t.id})">
+      <div class="tx-emoji">${t.emoji}</div>
+      <div class="tx-info"><div class="tx-desc">${t.desc}</div><div class="tx-cat">${getCatByEmoji(t.emoji).label}</div></div>
+      <div class="tx-amount ${t.type}">${t.type==='gasto'?'− ':'+ '}$${fmt(t.amount)}</div>
+      <div class="tx-delete" onclick="deleteTx(${t.id})">🗑️</div>
+    </div>`).join('')}`).join('');
+}
+
+function renderCatStats(){
+  const m=getMonthTxs().filter(t=>t.type==='gasto');
+  const groups={};
+  m.forEach(t=>{ const c=getCatByEmoji(t.emoji); if(!groups[c.id]) groups[c.id]={...c,total:0}; groups[c.id].total+=t.amount; });
+  const entries=Object.values(groups).sort((a,b)=>b.total-a.total);
+  const maxV=entries.length?entries[0].total:1;
+  document.getElementById('catStats').innerHTML=entries.length
+    ?entries.map(e=>`<div class="cat-stat-item"><div class="cat-stat-emoji">${e.emoji}</div><div class="cat-stat-info"><div class="cat-stat-name">${e.label}</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:${(e.total/maxV*100).toFixed(0)}%;background:${e.color}"></div></div></div><div class="cat-stat-amount">$${fmt(e.total)}</div></div>`).join('')
+    :`<div class="empty-state"><div class="emoji">📊</div><p>Sin gastos este mes</p></div>`;
+}
+
+function setType(t){ currentType=t; document.getElementById('btnGasto').classList.toggle('active',t==='gasto'); document.getElementById('btnIngreso').classList.toggle('active',t==='ingreso'); document.getElementById('descInput').placeholder=t==='gasto'?'¿En qué gastaste?':'Fuente de ingreso...'; }
+
+function addTransaction(){
+  const desc=document.getElementById('descInput').value.trim();
+  const amount=parseFloat(document.getElementById('amountInput').value);
+  if(!desc){showToast('⚠️ Escribe una descripción');return;}
+  if(!amount||amount<=0){showToast('⚠️ Ingresa un monto válido');return;}
+  const now=new Date();
+  transactions.unshift({id:Date.now(),desc,amount,emoji:selectedEmoji,type:currentType,date:now.toISOString(),dateKey:now.toLocaleDateString('es-CL')});
+  save(); renderAll();
+  document.getElementById('descInput').value='';
+  document.getElementById('amountInput').value='';
+  showToast(currentType==='gasto'?'✅ Gasto agregado':'✅ Ingreso agregado');
+}
+
+function toggleEmojiPicker(){document.getElementById('emojiPicker').classList.toggle('show');document.getElementById('overlay').classList.toggle('show');}
+function closeEmojiPicker(){document.getElementById('emojiPicker').classList.remove('show');document.getElementById('overlay').classList.remove('show');}
+function selectEmoji(e){selectedEmoji=e;document.getElementById('emojiBtn').textContent=e;closeEmojiPicker();}
+function ts(e){touchStartX=e.touches[0].clientX;}
+function te(e,id){ const diff=touchStartX-e.changedTouches[0].clientX; const card=document.getElementById('tx-'+id); if(diff>50) card.classList.add('swiped'); else if(diff<-20) card.classList.remove('swiped'); }
+function deleteTx(id){transactions=transactions.filter(t=>t.id!==id);save();renderAll();showToast('🗑️ Eliminado');}
+function switchView(v){ document.getElementById('mainView').classList.toggle('hidden',v!=='home'); document.getElementById('statsView').classList.toggle('active',v==='stats'); document.getElementById('navHome').classList.toggle('active',v==='home'); document.getElementById('navStats').classList.toggle('active',v==='stats'); if(v==='stats') renderCatStats(); }
+function fmt(n){return Math.abs(n).toLocaleString('es-CL',{maximumFractionDigits:0});}
+function fmtDate(d){ const today=new Date().toLocaleDateString('es-CL'); const yday=new Date(Date.now()-86400000).toLocaleDateString('es-CL'); return d===today?'Hoy':d===yday?'Ayer':d; }
+function save(){localStorage.setItem('mgv3',JSON.stringify(transactions));}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+
+document.getElementById('amountInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTransaction();});
+document.getElementById('descInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('amountInput').focus();});
+init();
+</script>
+</body>
+</html>
